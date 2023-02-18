@@ -1,5 +1,5 @@
-PROG = exe
-FONTES = Ponto.cpp Poligono.cpp PontosNoTriangulo.cpp
+PROG = app
+FONTES = Point.cpp Polygon.cpp Detector.cpp
 
 OBJETOS = $(FONTES:.cpp=.o)
 CPPFLAGS = -g -O3 -DGL_SILENCE_DEPRECATION -Wno-unused-result -fopenmp

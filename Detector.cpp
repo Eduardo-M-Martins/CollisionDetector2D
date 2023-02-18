@@ -1,187 +1,173 @@
-// Autores: Eduardo Machado Martins & Nathan dos Reis Ramos de Mello
-// Ler README.md
-
 #include <regex>
 
 using namespace std;
 
-#include "Ponto.h"
-#include "Poligono.h"
+#include "Point.h"
+#include "Polygon.h"
 
-Poligono PontosCenario, CampoVisao, TrianguloBase, PontoVerde, PontoAmarelo;
-Ponto Min, Max, Tamanho, Meio, PosicaoCampoVisao;
+Polygon ScenarioPoints, FieldVision, Triangle, GreenPoint, YellowPoint;
+Point Min, Max, Size, Middle, PosFieldVision;
 string modeDesc=" | Mode: Brute force", colorDesc=" | Color: OFF", detailDesc=" | Details: OFF", infoDesc="-> Nº BruteForce tests: ";
 
-vector<Poligono> leafs;
+vector<Polygon> leafs;
 vector<int> idxt;
 
-float AnguloCampoVisao=0.0, moveScale=2, coordMax=500;
+float angFieldVision=0.0, moveScale=2, coordMax=500;
 int fileNpts=0, modeStatus=0, infoStatus=0, treeNvalue=10;
 bool colorStatus=false, lineStatus=false;
 
-// Metodo que auxilia a imprimir os resultados
 void clear(int i){
     for (int j=0; j<i; j++){
         system("tput cuu1;tput dl1");
     }
 }
 
-// Verifica se String é um numero
 bool isNumeric(string const &str){
     auto it = find_if(str.begin(), str.end(), [](char const &c){ return !isdigit(c); });
     return !str.empty() && it == str.end();
 }
 
-// Metodo que gera pontos aleatorios no intervalo [Min..Max]
-void GeraPontos(unsigned long int qtd, Ponto Min, Ponto Max){
+void createPoints(unsigned long int qtd, Point Min, Point Max){
     time_t t;
-    Ponto Escala;
-    Escala = (Max-Min) * (1.0/1000.0);
+    Point Scale;
+    Scale = (Max-Min) * (1.0/1000.0);
     srand((unsigned)time(&t));
     for (int i=0; i<qtd; i++){
         float x = rand() % 1000;
         float y = rand() % 1000;
-        x = x*Escala.x + Min.x;
-        y = y*Escala.y + Min.y;
-        PontosCenario.insereVertice(Ponto(x, y));
+        x = x*Scale.x + Min.x;
+        y = y*Scale.y + Min.y;
+        ScenarioPoints.addVertice(Point(x, y));
     }
 }
 
-// Cria um triangulo a partir do vetor (1,0,0), girando este vetor em 45 e -45 graus.
-void CriaTrianguloCampoVisao(){
-    Ponto vetor = Ponto(1, 0, 0);
+void createTriangle(){
+    Point vector = Point(1, 0, 0);
 
-    TrianguloBase.insereVertice(Ponto(0, 0, 0));
-    CampoVisao.insereVertice(Ponto(0, 0, 0));
+    Triangle.addVertice(Point(0, 0, 0));
+    FieldVision.addVertice(Point(0, 0, 0));
 
-    vetor.rotacionaZ(45);
-    TrianguloBase.insereVertice(vetor);
-    CampoVisao.insereVertice(vetor);
+    vector.rotateZ(45);
+    Triangle.addVertice(vector);
+    FieldVision.addVertice(vector);
 
-    vetor.rotacionaZ(-90);
-    TrianguloBase.insereVertice(vetor);
-    CampoVisao.insereVertice(vetor);
+    vector.rotateZ(-90);
+    Triangle.addVertice(vector);
+    FieldVision.addVertice(vector);
 }
 
-// Posiciona o campo de visão na posicao PosicaoCampoVisao com a orientacao "AnguloCampoVisao".
-void PosicionaTrianguloCampoVisao(){
-    float tamanho = Tamanho.x*0.25;
-    Ponto temp;
-    for (int i=0; i<TrianguloBase.getNVertices(); i++){
-        temp = TrianguloBase.getVertice(i);
-        temp.rotacionaZ(AnguloCampoVisao);
-        CampoVisao.alteraVertice(i, PosicaoCampoVisao + temp * tamanho);
+void setTriangle(){
+    float size = Size.x*0.25;
+    Point temp;
+    for (int i=0; i<Triangle.getNVertices(); i++){
+        temp = Triangle.getVertice(i);
+        temp.rotateZ(angFieldVision);
+        FieldVision.setVertice(i, PosFieldVision + temp * size);
     }
 }
 
-// Move o campo de visão "distancia" unidades pra frente ou pra tras.
-void AvancaCampoVisao(float distancia){
-    Ponto vetor = Ponto(1, 0, 0);
-    vetor.rotacionaZ(AnguloCampoVisao);
-    PosicaoCampoVisao = PosicaoCampoVisao + vetor * distancia;
+void setFieldVision(float dist){
+    Point vector = Point(1, 0, 0);
+    vector.rotateZ(angFieldVision);
+    PosFieldVision = PosFieldVision + vector * dist;
 }
 
-// Definição do tipo Nodo
-struct Nodo{
-    Poligono e;
-    Ponto eMax, eMin;
-    vector<Nodo> filhos;
+struct Node{
+    Polygon e;
+    Point eMax, eMin;
+    vector<Node> subNode;
     vector<int> idx;
-    int nPontos = -1, altura;
-    bool folha = false;
+    int nPoints = -1, height;
+    bool leaf = false;
 };
-Nodo Tree;
+Node Tree;
 
-// Metodo que gera a estrutura de uma QuadTree a partir dos pontos no cerario
-void geraQuadTree(Ponto Max, Ponto Min, Nodo *nodo, int altura){
+void createQuadTree(Point Max, Point Min, Node *node, int height){
     int r = 0;
-    nodo->altura=altura;
-    altura++;
-    Ponto Med = (Max + Min) * 0.5;
-    Ponto Tam = (Max - Min);
+    node->height=height;
+    height++;
+    Point Midd = (Max + Min) * 0.5;
     vector<int> aux;
-    for (int i=0; i<PontosCenario.getNVertices(); i++){
-        if (PontosCenario.getVertice(i).x >= Min.x && PontosCenario.getVertice(i).x <= Max.x && PontosCenario.getVertice(i).y >= Min.y && PontosCenario.getVertice(i).y <= Max.y){
+    for (int i=0; i<ScenarioPoints.getNVertices(); i++){
+        if (ScenarioPoints.getVertice(i).x >= Min.x && ScenarioPoints.getVertice(i).x <= Max.x && ScenarioPoints.getVertice(i).y >= Min.y && ScenarioPoints.getVertice(i).y <= Max.y){
             r++;
             aux.push_back(i);
         }
     }
 
-    nodo->e.insereVertice(Ponto(Min.x, Min.y, 0.0));
-    nodo->e.insereVertice(Ponto(Max.x, Min.y, 0.0));
-    nodo->e.insereVertice(Ponto(Max.x, Max.y, 0.0));
-    nodo->e.insereVertice(Ponto(Min.x, Max.y, 0.0));
+    node->e.addVertice(Point(Min.x, Min.y, 0.0));
+    node->e.addVertice(Point(Max.x, Min.y, 0.0));
+    node->e.addVertice(Point(Max.x, Max.y, 0.0));
+    node->e.addVertice(Point(Min.x, Max.y, 0.0));
 
-    if ((r>=treeNvalue) && (nodo->nPontos==-1) && altura<7){
-        nodo->nPontos = r;
+    if ((r>=treeNvalue) && (node->nPoints==-1) && height<7){
+        node->nPoints = r;
 
         for (int i=0; i<4; i++){
-            Nodo n;
-            nodo->filhos.push_back(n);
+            Node n;
+            node->subNode.push_back(n);
         }
-        Ponto Ma, Mi;
-        Mi = (Ponto(Min.x, Med.y));
-        Ma = (Ponto(Med.x, Max.y));
-        geraQuadTree(Ma, Mi, &(nodo->filhos.at(0)),altura);
-        Mi = (Ponto(Med.x, Med.y));
-        Ma = (Ponto(Max.x, Max.y));
-        geraQuadTree(Ma, Mi, &(nodo->filhos.at(1)),altura);
-        Mi = (Ponto(Med.x, Min.y));
-        Ma = (Ponto(Max.x, Med.y));
-        geraQuadTree(Ma, Mi, &(nodo->filhos.at(2)),altura);
-        Mi = (Ponto(Min.x, Min.y));
-        Ma = (Ponto(Med.x, Med.y));
-        geraQuadTree(Ma, Mi, &(nodo->filhos.at(3)),altura);
+        Point Ma, Mi;
+        Mi = (Point(Min.x, Midd.y));
+        Ma = (Point(Midd.x, Max.y));
+        createQuadTree(Ma, Mi, &(node->subNode.at(0)),height);
+        Mi = (Point(Midd.x, Midd.y));
+        Ma = (Point(Max.x, Max.y));
+        createQuadTree(Ma, Mi, &(node->subNode.at(1)),height);
+        Mi = (Point(Midd.x, Min.y));
+        Ma = (Point(Max.x, Midd.y));
+        createQuadTree(Ma, Mi, &(node->subNode.at(2)),height);
+        Mi = (Point(Min.x, Min.y));
+        Ma = (Point(Midd.x, Midd.y));
+        createQuadTree(Ma, Mi, &(node->subNode.at(3)),height);
     } else {
-        nodo->folha = true;
-        nodo->idx=aux;
-        nodo->nPontos = r;
-        nodo->e.obtemLimites(nodo->eMin, nodo->eMax);
-        leafs.push_back(nodo->e);
+        node->leaf = true;
+        node->idx=aux;
+        node->nPoints = r;
+        node->e.getLimits(node->eMin, node->eMax);
+        leafs.push_back(node->e);
     }
 }
 
-//  Faz as inicializacoes das variaveis de estado da aplicacao
-void init(string ler){
+void init(string read){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-    if (ler.empty()==1){
+    if (read.empty()==1){
         cout << fileNpts << " random points were created!\n" << endl;
-        GeraPontos(fileNpts, Ponto(0, 0), Ponto(coordMax, coordMax));
+        createPoints(fileNpts, Point(0, 0), Point(coordMax, coordMax));
     }
 
-    PontosCenario.obtemLimites(Min, Max);
+    ScenarioPoints.getLimits(Min, Max);
     Min.x--;
     Min.y--;
     Max.x++;
     Max.y++;
 
-    Meio = (Max + Min) * 0.5;
-    Tamanho = (Max - Min);
-    moveScale = Tamanho.modulo() * 0.004;
+    Middle = (Max + Min) * 0.5;
+    Size = (Max - Min);
+    moveScale = Size.magnitude() * 0.004;
 
-    PosicaoCampoVisao = Meio;
-    AnguloCampoVisao = 0;
+    PosFieldVision = Middle;
+    angFieldVision = 0;
 
     idxt.clear();
     leafs.clear();
-    geraQuadTree(Max, Min, &Tree, 0);
+    createQuadTree(Max, Min, &Tree, 0);
 
-    CriaTrianguloCampoVisao();
-    PosicionaTrianguloCampoVisao();
+    createTriangle();
+    setTriangle();
 }
 
-// Define os indexes dos pontos que passaram no filtro da QuadTree
-void getIdxt(Nodo T){
+void getIdxt(Node T){
 
-    if(!T.folha){
-        getIdxt(T.filhos.at(0));
-        getIdxt(T.filhos.at(1));
-        getIdxt(T.filhos.at(2));
-        getIdxt(T.filhos.at(3));
+    if(!T.leaf){
+        getIdxt(T.subNode.at(0));
+        getIdxt(T.subNode.at(1));
+        getIdxt(T.subNode.at(2));
+        getIdxt(T.subNode.at(3));
     } else {
-        Ponto Emin, Emax;
-        CampoVisao.obtemLimites(Emin, Emax);
+        Point Emin, Emax;
+        FieldVision.getLimits(Emin, Emax);
 
         if((T.eMin.x <= Emax.x && T.eMax.x >= Emin.x && T.eMin.y <= Emax.y && T.eMax.y >= Emin.y)){
             idxt.insert(idxt.begin(), T.idx.begin(), T.idx.end());
@@ -194,17 +180,16 @@ void getIdxt(Nodo T){
     idxt.erase(end, idxt.end());
 }
 
-// Metodo da QuadTree
 int quad(){
-    Ponto min, max;
+    Point min, max;
     bool isGreen;
-    CampoVisao.obtemLimites(min, max);
-    PontoVerde.clear();
-    PontoAmarelo.clear();
+    FieldVision.getLimits(min, max);
+    GreenPoint.clear();
+    YellowPoint.clear();
 
-    Ponto v1 = operator-(CampoVisao.getVertice(1), CampoVisao.getVertice(0));
-    Ponto v2 = operator-(CampoVisao.getVertice(2), CampoVisao.getVertice(1));
-    Ponto v3 = operator-(CampoVisao.getVertice(0), CampoVisao.getVertice(2));
+    Point v1 = operator-(FieldVision.getVertice(1), FieldVision.getVertice(0));
+    Point v2 = operator-(FieldVision.getVertice(2), FieldVision.getVertice(1));
+    Point v3 = operator-(FieldVision.getVertice(0), FieldVision.getVertice(2));
 
     int r = 0;
 
@@ -213,15 +198,15 @@ int quad(){
         isGreen = false;
         if(infoStatus==1)
             r++;
-        Ponto ponto = PontosCenario.getVertice(idxt.at(i));
+        Point ponto = ScenarioPoints.getVertice(idxt.at(i));
         if (ponto.x > min.x && ponto.x < max.x && ponto.y > min.y && ponto.y < max.y){
             if(infoStatus==0)
                 r++;
-            Ponto va = operator-(ponto, CampoVisao.getVertice(0));
+            Point va = operator-(ponto, FieldVision.getVertice(0));
             if ((v1.x * va.y) - (v1.y * va.x) < 0){
-                va = operator-(ponto, CampoVisao.getVertice(1));
+                va = operator-(ponto, FieldVision.getVertice(1));
                 if ((v2.x * va.y) - (v2.y * va.x) < 0){
-                    va = operator-(ponto, CampoVisao.getVertice(2));
+                    va = operator-(ponto, FieldVision.getVertice(2));
                     if ((v3.x * va.y) - (v3.y * va.x) < 0){
                         isGreen = true;
                         if(infoStatus==2)
@@ -233,47 +218,46 @@ int quad(){
         if(isGreen){
             #pragma omp critical
             {
-                PontoVerde.insereVertice(ponto);
+                GreenPoint.addVertice(ponto);
             }
         }else{
             #pragma omp critical
             {
-                PontoAmarelo.insereVertice(ponto);
+                YellowPoint.addVertice(ponto);
             }
         }
     }
     return r;
 }
 
-// Metodo do Envelope
 int envelope()
 {
-    Ponto min, max;
+    Point min, max;
     bool isGreen;
-    CampoVisao.obtemLimites(min, max);
-    PontoVerde.clear();
-    PontoAmarelo.clear();
+    FieldVision.getLimits(min, max);
+    GreenPoint.clear();
+    YellowPoint.clear();
 
-    Ponto v1 = operator-(CampoVisao.getVertice(1), CampoVisao.getVertice(0));
-    Ponto v2 = operator-(CampoVisao.getVertice(2), CampoVisao.getVertice(1));
-    Ponto v3 = operator-(CampoVisao.getVertice(0), CampoVisao.getVertice(2));
+    Point v1 = operator-(FieldVision.getVertice(1), FieldVision.getVertice(0));
+    Point v2 = operator-(FieldVision.getVertice(2), FieldVision.getVertice(1));
+    Point v3 = operator-(FieldVision.getVertice(0), FieldVision.getVertice(2));
 
     int r = 0;
 
     #pragma omp parallel for reduction(+ : r) schedule(dynamic, 8)
-    for (int i = 0; i < PontosCenario.getNVertices(); i++){
+    for (int i = 0; i < ScenarioPoints.getNVertices(); i++){
         if(infoStatus==1)
                 r++;
-        Ponto ponto = PontosCenario.getVertice(i);
+        Point ponto = ScenarioPoints.getVertice(i);
         if (ponto.x > min.x && ponto.x < max.x && ponto.y > min.y && ponto.y < max.y){
             isGreen = false;
             if(infoStatus==0)
                 r++;
-            Ponto va = operator-(ponto, CampoVisao.getVertice(0));
+            Point va = operator-(ponto, FieldVision.getVertice(0));
             if ((v1.x * va.y) - (v1.y * va.x) < 0){
-                va = operator-(ponto, CampoVisao.getVertice(1));
+                va = operator-(ponto, FieldVision.getVertice(1));
                 if ((v2.x * va.y) - (v2.y * va.x) < 0){
-                    va = operator-(ponto, CampoVisao.getVertice(2));
+                    va = operator-(ponto, FieldVision.getVertice(2));
                     if ((v3.x * va.y) - (v3.y * va.x) < 0){
                         isGreen = true;
                         if(infoStatus==2)
@@ -284,12 +268,12 @@ int envelope()
             if(isGreen){
                 #pragma omp critical
                 {
-                    PontoVerde.insereVertice(ponto);
+                    GreenPoint.addVertice(ponto);
                 }
             }else{
                 #pragma omp critical
                 {
-                    PontoAmarelo.insereVertice(ponto);
+                    YellowPoint.addVertice(ponto);
                 }
             }
         }
@@ -297,27 +281,26 @@ int envelope()
     return r;
 }
 
-//Metodo de Força Bruta
-int forcaBruta()
+int bruteForce()
 {   
     int r = 0;
-    PontoVerde.clear();
-    Ponto v1 = operator-(CampoVisao.getVertice(1), CampoVisao.getVertice(0));
-    Ponto v2 = operator-(CampoVisao.getVertice(2), CampoVisao.getVertice(1));
-    Ponto v3 = operator-(CampoVisao.getVertice(0), CampoVisao.getVertice(2));
+    GreenPoint.clear();
+    Point v1 = operator-(FieldVision.getVertice(1), FieldVision.getVertice(0));
+    Point v2 = operator-(FieldVision.getVertice(2), FieldVision.getVertice(1));
+    Point v3 = operator-(FieldVision.getVertice(0), FieldVision.getVertice(2));
     #pragma omp parallel for reduction(+ : r) schedule(dynamic, 8)
-    for (int i = 0; i < PontosCenario.getNVertices(); i++){
+    for (int i = 0; i < ScenarioPoints.getNVertices(); i++){
         if(infoStatus==0)
             r++;
-        Ponto va = operator-(PontosCenario.getVertice(i), CampoVisao.getVertice(0));
+        Point va = operator-(ScenarioPoints.getVertice(i), FieldVision.getVertice(0));
         if ((v1.x * va.y) - (v1.y * va.x) < 0){
-            va = operator-(PontosCenario.getVertice(i), CampoVisao.getVertice(1));
+            va = operator-(ScenarioPoints.getVertice(i), FieldVision.getVertice(1));
             if ((v2.x * va.y) - (v2.y * va.x) < 0){
-                va = operator-(PontosCenario.getVertice(i), CampoVisao.getVertice(2));
+                va = operator-(ScenarioPoints.getVertice(i), FieldVision.getVertice(2));
                 if ((v3.x * va.y) - (v3.y * va.x) < 0){
                     #pragma omp critical
                     {
-                        PontoVerde.insereVertice(PontosCenario.getVertice(i));
+                        GreenPoint.addVertice(ScenarioPoints.getVertice(i));
                     }
                     if(infoStatus==2)
                         r++;
@@ -328,10 +311,9 @@ int forcaBruta()
     return r;
 }
 
-// Metodo que chama os algoritmos
 int exe(){
     if (modeStatus == 0){
-        return forcaBruta();
+        return bruteForce();
     } else if (modeStatus == 1){
         return envelope();
     } else {
@@ -364,22 +346,22 @@ void display(void){
         glColor3f(1, 1, 1);
     }
 
-    PontosCenario.desenhaVertices();
+    ScenarioPoints.drawVertices();
 
     if (colorStatus){
         if (modeStatus == 1||modeStatus==2){
-            for (int i = 0; i < PontoAmarelo.getNVertices(); i++){
-                Ponto P;
-                P = PontoAmarelo.getVertice(i);
+            for (int i = 0; i < YellowPoint.getNVertices(); i++){
+                Point P;
+                P = YellowPoint.getVertice(i);
                 glBegin(GL_POINTS);
                 glColor3f(1, 1, 0);
                 glVertex3f(P.x, P.y, P.z);
                 glEnd();
             }
         }
-        for (int i = 0; i < PontoVerde.getNVertices(); i++){
-            Ponto P;
-            P = PontoVerde.getVertice(i);
+        for (int i = 0; i < GreenPoint.getNVertices(); i++){
+            Point P;
+            P = GreenPoint.getVertice(i);
             glBegin(GL_POINTS);
             glColor3f(0, 0.75, 0);
             glVertex3f(P.x, P.y, P.z);
@@ -390,52 +372,50 @@ void display(void){
     if(lineStatus && modeStatus == 2){
         glLineWidth(2);
         glColor3f(0.5, 0.5, 0.5);
-        for (Poligono p : leafs){
-            p.desenhaPoligono();
+        for (Polygon p : leafs){
+            p.drawPolygon();
         }
     }
 
     if ((modeStatus == 1 && lineStatus)||(modeStatus == 2 && lineStatus)){
         glLineWidth(2);
         glColor3f(0, 0, 1);
-        CampoVisao.createEnvelope(lineStatus);
+        FieldVision.createEnvelope(lineStatus);
     }
 
     glLineWidth(3);
     glColor3f(1, 0, 0);
-    CampoVisao.desenhaPoligono();
+    FieldVision.drawPolygon();
 
     glutSwapBuffers();
 }
 
-// Metodo para para colocar o triangulo em posições especificas
-void PosicionaCampoDeVisao(int n)
+void posFieldVision(int n)
 {
  switch (n) {
     case 1:
-        AnguloCampoVisao = 0;
-        PosicaoCampoVisao = Meio;
+        angFieldVision = 0;
+        PosFieldVision = Middle;
         break;
     case 2:
-        AnguloCampoVisao = 90;
-        PosicaoCampoVisao = Meio;
+        angFieldVision = 90;
+        PosFieldVision = Middle;
         break;
     case 3:
-        AnguloCampoVisao = 90;
-        PosicaoCampoVisao = Meio*0.5;
+        angFieldVision = 90;
+        PosFieldVision = Middle*0.5;
         break;
     case 4:
-        AnguloCampoVisao = 0;
-        PosicaoCampoVisao = Meio + Meio*0.5;
+        angFieldVision = 0;
+        PosFieldVision = Middle + Middle*0.5;
         break;
     default:
         break;
  }
  
- PosicionaTrianguloCampoVisao();
+ setTriangle();
 }
 
-// Metodo para mudar o valor N da QuadTree
 void changeNvalue(){
     clear(1);
     string verify = "";
@@ -450,25 +430,23 @@ void changeNvalue(){
         }
         idxt.clear();
         leafs.clear();
-        Nodo New;
+        Node New;
         Tree=New;
-        geraQuadTree(Max, Min, &Tree, 0);
+        createQuadTree(Max, Min, &Tree, 0);
     }
     clear(2);
 }
 
-// Metodo para aumentar/diminuir o campo de visão
 void zoom(int i){
     if (i == 1){
-        TrianguloBase.alteraVertice(1, (operator+(TrianguloBase.getVertice(1), (operator*(TrianguloBase.getVertice(1), 0.05)))));
-        TrianguloBase.alteraVertice(2, (operator+(TrianguloBase.getVertice(2), (operator*(TrianguloBase.getVertice(2), 0.05)))));
+        Triangle.setVertice(1, (operator+(Triangle.getVertice(1), (operator*(Triangle.getVertice(1), 0.05)))));
+        Triangle.setVertice(2, (operator+(Triangle.getVertice(2), (operator*(Triangle.getVertice(2), 0.05)))));
     } else {
-        TrianguloBase.alteraVertice(1, (operator*(TrianguloBase.getVertice(1), 0.95)));
-        TrianguloBase.alteraVertice(2, (operator*(TrianguloBase.getVertice(2), 0.95)));
+        Triangle.setVertice(1, (operator*(Triangle.getVertice(1), 0.95)));
+        Triangle.setVertice(2, (operator*(Triangle.getVertice(2), 0.95)));
     }
 }
 
-// Entrada do teclado
 void keyboard(unsigned char key, int x, int y){
     switch (key){
     case 27:
@@ -548,14 +526,14 @@ void keyboard(unsigned char key, int x, int y){
     case '4':
         int i;
         i = key - '0';
-        PosicionaCampoDeVisao(i);
+        posFieldVision(i);
         break;
 
     default:
         break;
     }
 
-    PosicionaTrianguloCampoVisao();
+    setTriangle();
     clear(1);
     cout << infoDesc << exe() <<  modeDesc << detailDesc << colorDesc << endl;
     glutPostRedisplay();
@@ -564,28 +542,27 @@ void keyboard(unsigned char key, int x, int y){
 void arrow_keys(int a_keys, int x, int y){
     switch (a_keys){
     case GLUT_KEY_LEFT:
-        AnguloCampoVisao += 2;
+        angFieldVision += 2;
         break;
     case GLUT_KEY_RIGHT:
-        AnguloCampoVisao -= 2;
+        angFieldVision -= 2;
         break;
     case GLUT_KEY_UP:
-        AvancaCampoVisao(moveScale);
+        setFieldVision(moveScale);
         break;
     case GLUT_KEY_DOWN:
-        AvancaCampoVisao(moveScale * (-1));
+        setFieldVision(moveScale * (-1));
         break;
     default:
         break;
     }
 
-    PosicionaTrianguloCampoVisao();
+    setTriangle();
     clear(1);
     cout << infoDesc << exe() <<  modeDesc << detailDesc << colorDesc << endl;
     glutPostRedisplay();
 }
 
-// Ler arquivo
 void readFile(string *name){
     ifstream input;
     input.open(*name, ios::in);
@@ -596,26 +573,25 @@ void readFile(string *name){
 
     cout << "Reading the file... " << *name << "...";
     string S;
-    unsigned int qtdVertices;
-    input >> qtdVertices;
+    unsigned int nVertices;
+    input >> nVertices;
 
-    for (int i = 0; i < qtdVertices; i++){
+    for (int i = 0; i < nVertices; i++){
         double x, y;
         input >> x >> y;
         if (!input)
             break;
-        PontosCenario.insereVertice(Ponto(x, y));
+        ScenarioPoints.addVertice(Point(x, y));
     }
     cout << " Done!\n" << endl;
     moveScale = abs(coordMax * 0.004);
 }
 
-// Metodo principal
 int main(int argc, char **argv){
     system("export OMP_NUM_THREADS=8");
     system("clear");
     cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
-    cout << "-                OpenGL Program - CG - T1                   -" << endl;
+    cout << "-                      OpenGL Program                       -" << endl;
     cout << "- Eduardo Machado Martins & Nathan dos Reis Ramos de Mello  -" << endl;
     cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
     cout << "-  'Esc'...End program                                      -\n-  '+/-'...Change field of vision size                      -\n-  ' '.....Show details                                     -\n-  'c'.....Points with colors                               -\n-  'x'.....Change algorithm                                 -\n-  'z'.....Change info                                      -\n-  'n'.....Change Tree N value                              -" << endl;
