@@ -1,0 +1,16 @@
+PROG = exe
+FONTES = Ponto.cpp Poligono.cpp PontosNoTriangulo.cpp
+
+OBJETOS = $(FONTES:.cpp=.o)
+CPPFLAGS = -g -O3 -DGL_SILENCE_DEPRECATION -Wno-unused-result -fopenmp
+
+UNAME = `uname`
+
+all: $(TARGET)
+	-@make $(UNAME)
+
+Linux: $(OBJETOS)
+	gcc $(OBJETOS) -O3 -lGL -lGLU -lglut -lm -lstdc++ -fopenmp -o $(PROG); rm *.o
+
+clean:
+	-@ rm -f $(OBJETOS) $(PROG)
