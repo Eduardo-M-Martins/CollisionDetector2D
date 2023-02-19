@@ -7,20 +7,14 @@ using namespace std;
 
 Polygon ScenarioPoints, FieldVision, Triangle, GreenPoint, YellowPoint;
 Point Min, Max, Size, Middle, PosFieldVision;
-string modeDesc=" | Mode: Brute force", colorDesc=" | Color: OFF", detailDesc=" | Details: OFF", infoDesc="-> Nº BruteForce tests: ";
+string modeDesc=" | Mode('x'): Brute force", colorDesc=" | Color('c'): OFF", detailDesc=" | Details(' '): OFF", infoDesc="-> Points : ";
 
 vector<Polygon> leafs;
 vector<int> idxt;
 
 float angFieldVision=0.0, moveScale=2, coordMax=500;
-int fileNpts=0, modeStatus=0, infoStatus=0, treeNvalue=10;
+int fileNpts=0, modeStatus=0, treeNvalue=10;
 bool colorStatus=false, lineStatus=false;
-
-void clear(int i){
-    for (int j=0; j<i; j++){
-        system("tput cuu1;tput dl1");
-    }
-}
 
 bool isNumeric(string const &str){
     auto it = find_if(str.begin(), str.end(), [](char const &c){ return !isdigit(c); });
@@ -133,7 +127,7 @@ void init(string read){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     if (read.empty()==1){
-        cout << fileNpts << " random points were created!\n" << endl;
+        cout << "\n" << fileNpts << " random points were created!\n" << endl;
         createPoints(fileNpts, Point(0, 0), Point(coordMax, coordMax));
     }
 
@@ -196,12 +190,8 @@ int quad(){
     #pragma omp parallel for reduction(+ : r) schedule(dynamic, 8)
     for (int i=0; i<idxt.size(); i++){
         isGreen = false;
-        if(infoStatus==1)
-            r++;
         Point ponto = ScenarioPoints.getVertice(idxt.at(i));
         if (ponto.x > min.x && ponto.x < max.x && ponto.y > min.y && ponto.y < max.y){
-            if(infoStatus==0)
-                r++;
             Point va = operator-(ponto, FieldVision.getVertice(0));
             if ((v1.x * va.y) - (v1.y * va.x) < 0){
                 va = operator-(ponto, FieldVision.getVertice(1));
@@ -209,8 +199,7 @@ int quad(){
                     va = operator-(ponto, FieldVision.getVertice(2));
                     if ((v3.x * va.y) - (v3.y * va.x) < 0){
                         isGreen = true;
-                        if(infoStatus==2)
-                            r++;
+                        r++;
                     }
                 }
             }
@@ -246,13 +235,9 @@ int envelope()
 
     #pragma omp parallel for reduction(+ : r) schedule(dynamic, 8)
     for (int i = 0; i < ScenarioPoints.getNVertices(); i++){
-        if(infoStatus==1)
-                r++;
         Point ponto = ScenarioPoints.getVertice(i);
         if (ponto.x > min.x && ponto.x < max.x && ponto.y > min.y && ponto.y < max.y){
             isGreen = false;
-            if(infoStatus==0)
-                r++;
             Point va = operator-(ponto, FieldVision.getVertice(0));
             if ((v1.x * va.y) - (v1.y * va.x) < 0){
                 va = operator-(ponto, FieldVision.getVertice(1));
@@ -260,8 +245,7 @@ int envelope()
                     va = operator-(ponto, FieldVision.getVertice(2));
                     if ((v3.x * va.y) - (v3.y * va.x) < 0){
                         isGreen = true;
-                        if(infoStatus==2)
-                            r++;
+                        r++;
                     }
                 }
             }
@@ -290,8 +274,6 @@ int bruteForce()
     Point v3 = operator-(FieldVision.getVertice(0), FieldVision.getVertice(2));
     #pragma omp parallel for reduction(+ : r) schedule(dynamic, 8)
     for (int i = 0; i < ScenarioPoints.getNVertices(); i++){
-        if(infoStatus==0)
-            r++;
         Point va = operator-(ScenarioPoints.getVertice(i), FieldVision.getVertice(0));
         if ((v1.x * va.y) - (v1.y * va.x) < 0){
             va = operator-(ScenarioPoints.getVertice(i), FieldVision.getVertice(1));
@@ -302,8 +284,7 @@ int bruteForce()
                     {
                         GreenPoint.addVertice(ScenarioPoints.getVertice(i));
                     }
-                    if(infoStatus==2)
-                        r++;
+                    r++;
                 }
             }
         }
@@ -417,7 +398,6 @@ void posFieldVision(int n)
 }
 
 void changeNvalue(){
-    clear(1);
     string verify = "";
     cout << "Input the new N value (min 5):" << endl;
     cout << "\n -> ";
@@ -434,7 +414,6 @@ void changeNvalue(){
         Tree=New;
         createQuadTree(Max, Min, &Tree, 0);
     }
-    clear(2);
 }
 
 void zoom(int i){
@@ -464,9 +443,9 @@ void keyboard(unsigned char key, int x, int y){
 
     case 'c':
         if (colorStatus){
-            colorDesc = " | Color: OFF";
+            colorDesc = " | Color('c'): OFF";
         } else {
-            colorDesc = " | Color: ON";
+            colorDesc = " | Color('c'): ON";
         }
         colorStatus = !colorStatus;
         break;
@@ -474,46 +453,31 @@ void keyboard(unsigned char key, int x, int y){
     case 'x':
         if (lineStatus){
             lineStatus = !lineStatus;
-            detailDesc = " | Details: OFF";
+            detailDesc = " | Details(' '): OFF";
         }
         if (colorStatus){
             colorStatus = !colorStatus;
-            colorDesc = " | Color: OFF";
+            colorDesc = " | Color('c'): OFF";
         }
         if (modeStatus == 0){
             modeStatus = 1;
-            modeDesc = " | Mode: Envelope";
+            modeDesc = " | Mode('x'): Envelope";
         } else if (modeStatus == 1){
             modeStatus = 2;
-            modeDesc = " | Mode: QuadTree";
+            modeDesc = " | Mode('x'): QuadTree";
         } else if (modeStatus = 2){
             modeStatus=0;
-            modeDesc = " | Mode: Brute force";
+            modeDesc = " | Mode('x'): Brute force";
         }
-        infoDesc="-> Nº of BruteForce tests: ";
-        infoStatus=0;
         break;
 
     case ' ':
         if (lineStatus){
-            detailDesc = " | Details: OFF";
+            detailDesc = " | Details(' '): OFF";
         } else {
-            detailDesc = " | Details: ON";
+            detailDesc = " | Details(' '): ON";
         }
         lineStatus = !lineStatus;
-        break;
-
-    case 'z':
-        if(infoStatus==0){
-            infoDesc="-> Nº Envelope tests  : ";
-            infoStatus=1;
-        } else if (infoStatus==1){
-            infoDesc="-> Nº inside triangle : ";
-            infoStatus=2;
-        } else if (infoStatus==2){
-            infoDesc="-> Nº BruteForce tests: ";
-            infoStatus=0;
-        }
         break;
 
     case 'n':
@@ -534,7 +498,6 @@ void keyboard(unsigned char key, int x, int y){
     }
 
     setTriangle();
-    clear(1);
     cout << infoDesc << exe() <<  modeDesc << detailDesc << colorDesc << endl;
     glutPostRedisplay();
 }
@@ -558,7 +521,6 @@ void arrow_keys(int a_keys, int x, int y){
     }
 
     setTriangle();
-    clear(1);
     cout << infoDesc << exe() <<  modeDesc << detailDesc << colorDesc << endl;
     glutPostRedisplay();
 }
@@ -601,13 +563,12 @@ int main(int argc, char **argv){
 
     string input = "";
     getline(cin, input);
-    clear(3);
 
     if (input.empty() == 0){
         readFile(&input);
     } else {
         string verify = "";
-        cout << "Input the number of random points (min 10):" << endl;
+        cout << "\nInput the number of random points (min 10):" << endl;
         cout << "\n -> ";
         getline(cin, verify);
         if ((!isNumeric(verify))){
@@ -619,7 +580,6 @@ int main(int argc, char **argv){
                 fileNpts = stoi(verify);
             }
         }
-        clear(3);
     }
 
     glutInit(&argc, argv);
