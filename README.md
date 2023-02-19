@@ -1,5 +1,5 @@
 # CollisionDetector2D
-By Eduardo Machado Martins
+By Eduardo Machado Martins and Nathan dos Reis Ramos de Mello
 
 ## Description
 This application is a 2D collision detector that uses OpenGL to create a screen based on a file or on a random generation of points. The field of vision can be manipulated with '←','↑','→' and '↓' keys. As the field of view is moved across the screen, the number of points inside the triangle is calculated. This applications uses three different methodologies to find the answer, the brute force, the envelope and the quadtree algorithms, the algorithm used can be changed using the 'x' key. Use the ' ' key to view implementation details, and 'c' to add colors to the application. Lastly, the triangle size can be incremented or incremented with the '+' and '-' keys respectively.
