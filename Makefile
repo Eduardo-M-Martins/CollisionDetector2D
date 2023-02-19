@@ -10,7 +10,7 @@ all: $(TARGET)
 	-@make $(UNAME)
 
 Linux: $(OBJETOS)
-	gcc $(OBJETOS) -O3 -lGL -lGLU -lglut -lm -lstdc++ -fopenmp -o $(PROG); rm *.o
+	gcc $(OBJETOS) -O3 -lGL -lGLU -lglut -lm -lstdc++ -fopenmp -o $(PROG)
 
 clean:
 	-@ rm -f $(OBJETOS) $(PROG)

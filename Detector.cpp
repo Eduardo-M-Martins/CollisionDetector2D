@@ -556,7 +556,7 @@ int main(int argc, char **argv){
     cout << "-                      OpenGL Program                       -" << endl;
     cout << "- Eduardo Machado Martins & Nathan dos Reis Ramos de Mello  -" << endl;
     cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
-    cout << "-  'Esc'...End program                                      -\n-  '+/-'...Change field of vision size                      -\n-  ' '.....Show details                                     -\n-  'c'.....Points with colors                               -\n-  'x'.....Change algorithm                                 -\n-  'z'.....Change info                                      -\n-  'n'.....Change Tree N value                              -" << endl;
+    cout << "-  'Esc'...End program                                      -\n-  '+/-'...Change field of vision size                      -\n-  ' '.....Show details                                     -\n-  'c'.....Points with colors                               -\n-  'x'.....Change algorithm                                 -\n-  'n'.....Change Tree N value                              -" << endl;
     cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n" << endl;
     cout << "Input the file name or press Enter to random points:" << endl;
     cout << "\n -> ";
