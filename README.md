@@ -3,6 +3,7 @@ By Eduardo Machado Martins
 ## Description
 
 ## Dependencies
+This application works on Linux and uses OpenGL libraries, C and C++. When downloaded, the lib.zip and include.zip files must be unzipped in the root directory.
 
 ## Execution
 The following command compiles the application.
