@@ -1,4 +1,4 @@
-# imageStyler
+# CollisionDetector2D
 By Eduardo Machado Martins
 ## Description
 
