@@ -19,5 +19,5 @@ The following command execute the application.
 
 ##
 <div align="center">  
-  <img src="https://cdn.discordapp.com/attachments/1076157666986049598/1076849328829771826/colider2d.png" alt="Image preview" /> 
+  <img src="https://cdn.discordapp.com/attachments/1076157666986049598/1077202355575062618/ColliderD2D.png" alt="Image preview" /> 
 </div>
